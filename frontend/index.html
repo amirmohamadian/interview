@@ -1,1 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Real-time Speech-to-Text (Vosk)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    button { padding: .7rem 1rem; border: 0; border-radius: .75rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    button.primary { background: #2f6feb; color: white; }
+    button.secondary { background: #f0f2f5; }
+    .status { font-size: .9rem; color: #555; }
+    .bubble { margin-top: 1rem; padding: 1rem; border-radius: 1rem; background: #f8fafc; min-height: 3rem; white-space: pre-wrap; }
+    .final { background: #eef7ff; }
+    code { background: #f3f4f6; padding: .1rem .3rem; border-radius: .3rem; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ Real-time Speech-to-Text</h1>
+  <p>Local, streaming transcription using <code>Vosk</code> on a Python backend.</p>
+
+  <div class="row">
+    <button id="start" class="primary">Start</button>
+    <button id="stop" class="secondary" disabled>Stop</button>
+    <span class="status" id="status">Idle</span>
+  </div>
+
+  <h3>Live transcript</h3>
+  <div id="partial" class="bubble"></div>
+  <div id="final" class="bubble final"></div>
+
+  <script type="module">
+    const startBtn = document.getElementById('start');
+    const stopBtn  = document.getElementById('stop');
+    const statusEl = document.getElementById('status');
+    const partialEl= document.getElementById('partial');
+    const finalEl  = document.getElementById('final');
+
+    let ctx, mediaStream, sourceNode, workletNode, ws;
+
+    // Convert Float32 [-1,1] to 16-bit PCM (little-endian)
+    function floatTo16BitPCM(float32Array) {
+      const out = new Int16Array(float32Array.length);
+      for (let i = 0; i < float32Array.length; i++) {
+        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return out;
+    }
+
+    async function initAudioGraph() {
+      // Try to request 16k. If device can’t, the worklet still downsamples/channels to mono.
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+
+      // Mic
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+      sourceNode = ctx.createMediaStreamSource(mediaStream);
+
+      // Load our worklet
+      const workletURL = URL.createObjectURL(new Blob([`
+        class PCMDownsampler extends AudioWorkletProcessor {
+          constructor() {
+            super();
+            // No state needed; context.sampleRate gives us input rate
+            this.inputSampleRate = sampleRate;
+            this.targetSampleRate = 16000;
+            this._resampleRatio = this.inputSampleRate / this.targetSampleRate;
+            this._buffer = [];
+          }
+
+          // Simple linear resampler to 16k & mono mixdown
+          _downsample(channelData) {
+            if (this.inputSampleRate === this.targetSampleRate) {
+              return channelData; // already 16k
+            }
+            const outLength = Math.floor(channelData.length / this._resampleRatio);
+            const out = new Float32Array(outLength);
+            let i = 0;
+            let pos = 0;
+            while (i < outLength) {
+              const idx = Math.floor(pos);
+              const frac = pos - idx;
+              const s1 = channelData[idx] || 0;
+              const s2 = channelData[idx + 1] || 0;
+              out[i++] = s1 + (s2 - s1) * frac;
+              pos += this._resampleRatio;
+            }
+            return out;
+          }
+
+          process(inputs, outputs, parameters) {
+            const input = inputs[0];
+            if (!input || input.length === 0) return true;
+            // Mix to mono
+            const ch0 = input[0] || new Float32Array(128);
+            let mono = ch0;
+            if (input.length > 1) {
+              const len = ch0.length;
+              mono = new Float32Array(len);
+              for (let i = 0; i < len; i++) {
+                let sum = 0;
+                for (let c = 0; c < input.length; c++) sum += input[c][i] || 0;
+                mono[i] = sum / input.length;
+              }
+            }
+            // Downsample to 16k
+            const ds = this._downsample(mono);
+
+            // Send to main thread as raw Float32
+            this.port.postMessage(ds.buffer, [ds.buffer]);
+            return true;
+          }
+        }
+        registerProcessor('pcm-downsampler', PCMDownsampler);
+      `], { type: 'application/javascript' }));
+
+      await ctx.audioWorklet.addModule(workletURL);
+      workletNode = new AudioWorkletNode(ctx, 'pcm-downsampler');
+
+      // Pipe mic -> worklet (not to speakers)
+      sourceNode.connect(workletNode);
+
+      // When chunks arrive from the worklet, convert to PCM16 and ship to server
+      workletNode.port.onmessage = (event) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        const floatChunk = new Float32Array(event.data);
+        const pcm16 = floatTo16BitPCM(floatChunk);
+        ws.send(pcm16.buffer); // binary frame
+      };
+    }
+
+    function connectWS() {
+      return new Promise((resolve, reject) => {
+        ws = new WebSocket("ws://localhost:8000/ws");
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => resolve();
+        ws.onerror = (e) => reject(e);
+
+        ws.onmessage = (evt) => {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'partial') {
+              partialEl.textContent = msg.data?.partial || '';
+            } else if (msg.type === 'final') {
+              const text = msg.data?.text || '';
+              if (text) {
+                finalEl.textContent += (finalEl.textContent ? ' ' : '') + text;
+              }
+              partialEl.textContent = '';
+            } else if (msg.type === 'system') {
+              // optional system messages (e.g., reset)
+            }
+          } catch { /* ignore */ }
+        };
+      });
+    }
+
+    async function start() {
+      startBtn.disabled = true;
+      statusEl.textContent = 'Starting…';
+      finalEl.textContent = '';
+      partialEl.textContent = '';
+
+      await initAudioGraph();
+      await connectWS();
+
+      // Resume context (needed on some browsers)
+      if (ctx.state === 'suspended') await ctx.resume();
+
+      statusEl.textContent = `Recording @ ${ctx.sampleRate} Hz → streaming to backend`;
+      stopBtn.disabled = false;
+    }
+
+    async function stop() {
+      stopBtn.disabled = true;
+      statusEl.textContent = 'Stopping…';
+
+      try { ws?.send('__end__'); } catch {}
+      try { ws?.close(); } catch {}
+
+      try { workletNode?.disconnect(); } catch {}
+      try { sourceNode?.disconnect(); } catch {}
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+      }
+      try { await ctx?.close(); } catch {}
+
+      statusEl.textContent = 'Idle';
+      startBtn.disabled = false;
+    }
+
+    startBtn.addEventListener('click', start);
+    stopBtn.addEventListener('click', stop);
+  </script>
+</body>
+</html>
 
