@@ -105,6 +105,10 @@ BUNDLES = {
 
 MAX_TOPUP_PER_PURCHASE = 20
 
+# Strictly 1 free exam per email; per-IP cap is softer (3) so legit users on
+# shared networks (offices, campuses) still convert, while farming is blocked.
+MAX_FREE_GRANTS_PER_IP = 3
+
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -134,13 +138,16 @@ def init_db():
             monthly_used INTEGER NOT NULL DEFAULT 0,    -- exams used this cycle
             created_at REAL NOT NULL
         );
-        -- one free exam per email AND per IP: both recorded here
+        -- free-exam grants: 1 per email (unique), up to 3 per IP (counted)
         CREATE TABLE IF NOT EXISTS free_grants (
             kind TEXT NOT NULL,        -- 'email' or 'ip'
             value TEXT NOT NULL,
-            granted_at REAL NOT NULL,
-            PRIMARY KEY (kind, value)
+            granted_at REAL NOT NULL
         );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_free_email
+            ON free_grants(value) WHERE kind='email';
+        CREATE INDEX IF NOT EXISTS idx_free_ip
+            ON free_grants(kind, value);
         CREATE TABLE IF NOT EXISTS purchases (
             id TEXT PRIMARY KEY,
             account_id TEXT NOT NULL REFERENCES accounts(id),
@@ -211,16 +218,14 @@ def signup_or_login(email: str, ip: str) -> dict:
         email_used = conn.execute(
             "SELECT 1 FROM free_grants WHERE kind='email' AND value=?", (email,)
         ).fetchone()
-        ip_used = conn.execute(
-            "SELECT 1 FROM free_grants WHERE kind='ip' AND value=?", (ip,)
-        ).fetchone()
+        ip_grants = conn.execute(
+            "SELECT COUNT(*) AS n FROM free_grants WHERE kind='ip' AND value=?", (ip,)
+        ).fetchone()["n"]
         free = 0
-        if not email_used and not ip_used:
+        if not email_used and ip_grants < MAX_FREE_GRANTS_PER_IP:
             free = 1
             conn.execute("INSERT INTO free_grants VALUES ('email', ?, ?)", (email, now))
-            conn.execute(
-                "INSERT OR IGNORE INTO free_grants VALUES ('ip', ?, ?)", (ip, now)
-            )
+            conn.execute("INSERT INTO free_grants VALUES ('ip', ?, ?)", (ip, now))
 
         acc_id = str(uuid.uuid4())
         api_key = "exm_" + secrets.token_urlsafe(24)
