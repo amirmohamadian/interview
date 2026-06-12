@@ -1,24 +1,39 @@
-import asyncio
 import json
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from vosk import Model, KaldiRecognizer
+
+from billing import router as billing_router
+from database import init_db
 
 # ---- Config ----
 SAMPLE_RATE = 16000
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "vosk-model-small-en-us-0.15")
 
-# Load model once at startup
-if not os.path.isdir(MODEL_PATH):
-    raise RuntimeError(
-        f"Vosk model not found at {MODEL_PATH}. "
-        "Download and unzip a model into backend/models/ (e.g. vosk-model-small-en-us-0.15)."
-    )
-MODEL = Model(MODEL_PATH)
+_MODEL = None
 
-app = FastAPI()
+
+def get_model():
+    global _MODEL
+    if _MODEL is None:
+        if not os.path.isdir(MODEL_PATH):
+            raise RuntimeError(
+                f"Vosk model not found at {MODEL_PATH}. "
+                "Download and unzip a model into backend/models/ (e.g. vosk-model-small-en-us-0.15)."
+            )
+        _MODEL = Model(MODEL_PATH)
+    return _MODEL
+
+app = FastAPI(title="Interview Prep API")
+
+init_db()
+app.include_router(billing_router)
+
+_frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.isdir(_frontend_dir):
+    app.mount("/app", StaticFiles(directory=_frontend_dir, html=True), name="frontend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,7 +52,8 @@ async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     # New recognizer per connection
-    rec = KaldiRecognizer(MODEL, SAMPLE_RATE)
+    model = get_model()
+    rec = KaldiRecognizer(model, SAMPLE_RATE)
     rec.SetWords(True)
 
     try:
@@ -74,7 +90,7 @@ async def ws_endpoint(websocket: WebSocket):
                     await websocket.send_text(json.dumps({"type": "final", "data": final_json}))
                     break
                 elif text == "__reset__":
-                    rec = KaldiRecognizer(MODEL, SAMPLE_RATE)
+                    rec = KaldiRecognizer(get_model(), SAMPLE_RATE)
                     rec.SetWords(True)
                     await websocket.send_text(json.dumps({"type": "system", "data": "reset"}))
                 else:
