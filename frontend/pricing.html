@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Land more interviews — Resume ↔ Job match scoring</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Instantly score your resume against any job description. Start with 1 free exam — no credit card." />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121a33; --panel2:#0f1730; --line:#23304f;
+      --ink:#e8edf7; --muted:#9fb0cf; --brand:#3b82f6; --brand2:#22d3ee;
+      --good:#22c55e; --gold:#f59e0b; --radius:18px;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#16224a 0%,var(--bg) 55%);color:var(--ink)}
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+    .logo{font-weight:800;letter-spacing:.3px;font-size:1.15rem}
+    .logo span{color:var(--brand2)}
+    .btn{border:0;border-radius:12px;padding:.8rem 1.2rem;font-weight:700;cursor:pointer;font-size:.95rem;text-decoration:none;display:inline-block}
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04122b;box-shadow:0 8px 24px rgba(34,211,238,.25)}
+    .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+    .btn.block{width:100%;text-align:center}
+    .hero{text-align:center;padding:46px 0 14px}
+    .pill{display:inline-flex;gap:.5rem;align-items:center;background:rgba(34,211,238,.1);border:1px solid var(--line);color:var(--brand2);padding:.4rem .8rem;border-radius:999px;font-size:.82rem;font-weight:600}
+    .hero h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.05;margin:18px auto 10px;max-width:18ch}
+    .hero p.sub{color:var(--muted);font-size:1.12rem;max-width:60ch;margin:0 auto 22px}
+    .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .trust{color:var(--muted);font-size:.85rem;margin-top:14px}
+    .stars{color:var(--gold)}
+    .toggle{display:flex;gap:8px;justify-content:center;align-items:center;margin:30px 0 8px}
+    .seg{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px;display:inline-flex}
+    .seg button{background:transparent;border:0;color:var(--muted);padding:.55rem 1rem;border-radius:999px;cursor:pointer;font-weight:700}
+    .seg button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04122b}
+    .save{color:var(--good);font-size:.85rem;font-weight:700}
+    /* plans */
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:22px 0 8px}
+    .grid.subs{grid-template-columns:repeat(2,1fr)}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--radius);padding:24px;position:relative;display:flex;flex-direction:column}
+    .card.feature{border-color:var(--brand2);box-shadow:0 12px 40px rgba(34,211,238,.18)}
+    .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04122b;font-weight:800;font-size:.74rem;padding:.35rem .8rem;border-radius:999px;white-space:nowrap}
+    .badge.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#3a2400}
+    .pname{font-weight:800;font-size:1.15rem}
+    .tag{color:var(--muted);font-size:.9rem;min-height:1.2rem}
+    .price{font-size:2.4rem;font-weight:900;margin:10px 0 0}
+    .price small{font-size:.95rem;color:var(--muted);font-weight:600}
+    .perexam{color:var(--brand2);font-size:.85rem;font-weight:700;margin-bottom:14px}
+    ul.perks{list-style:none;padding:0;margin:8px 0 18px;display:flex;flex-direction:column;gap:10px}
+    ul.perks li{display:flex;gap:10px;color:var(--ink);font-size:.95rem}
+    ul.perks li svg{flex:0 0 18px;margin-top:2px}
+    .spacer{flex:1}
+    h2.section{text-align:center;font-size:1.6rem;margin:42px 0 4px}
+    p.section{text-align:center;color:var(--muted);margin:0 0 6px}
+    .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:30px 0}
+    @media(max-width:760px){.mini,.grid,.grid.subs{grid-template-columns:1fr}}
+    .mini .card{padding:18px}
+    .faq{margin:48px 0 20px}
+    details{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+    summary{cursor:pointer;font-weight:700}
+    details p{color:var(--muted);margin:10px 0 0}
+    footer{color:var(--muted);text-align:center;padding:40px 0;font-size:.85rem}
+    .note{text-align:center;color:var(--muted);font-size:.85rem;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <div class="logo">Resume<span>Match</span></div>
+      <a class="btn ghost" href="#pricing">See pricing</a>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+      <span class="pill">⚡ Get your match score in 30 seconds</span>
+      <h1>Know if your resume beats the job — before you apply</h1>
+      <p class="sub">Upload your resume + a job link and get an instant, GPT‑powered match score with the exact keywords you're missing. Your first exam is on us.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#start">Start free — 1 exam, no card</a>
+        <a class="btn ghost" href="#pricing">View plans</a>
+      </div>
+      <div class="trust"><span class="stars">★★★★★</span> Loved by job seekers · Cancel anytime · 7‑day money‑back guarantee</div>
+    </header>
+
+    <!-- VALUE STRIP -->
+    <section class="mini">
+      <div class="card"><div class="pname">🎯 Beat the bots</div><p class="tag">See the ATS keywords you're missing and fix them in minutes.</p></div>
+      <div class="card"><div class="pname">📊 Real score</div><p class="tag">A clear 0–100 match score with a detailed breakdown.</p></div>
+      <div class="card"><div class="pname">💸 From $0.45/exam</div><p class="tag">Cheaper than one printed resume. Way cheaper than a missed job.</p></div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing">
+      <h2 class="section">Simple pricing that pays for itself</h2>
+      <p class="section">Start free. Subscribe when you're serious. Top‑up cheaper anytime you run low.</p>
+
+      <div class="toggle">
+        <div class="seg">
+          <button id="monthly" class="on">Monthly</button>
+          <button id="annual">Annual <span class="save">· 2 months free</span></button>
+        </div>
+      </div>
+
+      <!-- subscriptions (the hero offer) -->
+      <div id="subs" class="grid subs"></div>
+
+      <h2 class="section" id="start">Or pay as you go</h2>
+      <p class="section">No subscription. Perfect for a one‑off application sprint.</p>
+      <div id="bundles" class="grid"></div>
+      <p class="note" id="topup-note"></p>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq">
+      <h2 class="section">Questions, answered</h2>
+      <details open><summary>Is the first exam really free?</summary><p>Yes — every new email (or API key) gets 1 full exam free, no credit card required.</p></details>
+      <details><summary>What happens when my monthly exams run out?</summary><p>Subscribers can top‑up at $0.50/exam — cheaper than any pay‑as‑you‑go bundle. No need to upgrade.</p></details>
+      <details><summary>What does "Unlimited" mean?</summary><p>Unlimited exams for normal use, with a fair‑use cap of 20 exams per day so the service stays fast for everyone.</p></details>
+      <details><summary>Can I just buy credits without subscribing?</summary><p>Absolutely. Grab a Starter or Value pack — credits stay valid for 12 months.</p></details>
+      <details><summary>Can I cancel?</summary><p>Anytime, in one click. Plus a 7‑day money‑back guarantee on subscriptions.</p></details>
+    </section>
+
+    <footer>© <span id="yr"></span> ResumeMatch · Start with 1 free exam — no card needed.</footer>
+  </div>
+
+  <script>
+    const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+      ? "http://localhost:8000" : "";
+    document.getElementById('yr').textContent = new Date().getFullYear();
+
+    const check = `<svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="3" width="18" height="18"><path d="M20 6L9 17l-5-5"/></svg>`;
+    let billing = "monthly";
+
+    function money(n){ return Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`; }
+
+    function renderSubs(p){
+      const el = document.getElementById('subs');
+      el.innerHTML = p.subscriptions.map(s => {
+        const price = billing === "annual" ? s.price_annual/12 : s.price_monthly;
+        const billed = billing === "annual"
+          ? `billed ${money(s.price_annual)}/yr` : "per month";
+        const feature = s.badge ? "feature" : "";
+        const badge = s.badge ? `<div class="badge">${s.badge}</div>` : "";
+        const per = s.per_exam_effective ? `<div class="perexam">≈ ${money(s.per_exam_effective)}/exam</div>` : `<div class="perexam">Best for heavy use</div>`;
+        const perks = s.perks.map(x => `<li>${check}<span>${x}</span></li>`).join("");
+        return `<div class="card ${feature}">${badge}
+          <div class="pname">${s.name}</div>
+          <div class="tag">${s.tagline||""}</div>
+          <div class="price">${money(Math.round(price*100)/100)}<small> /mo</small></div>
+          <div class="tag">${billed}</div>
+          ${per}
+          <ul class="perks">${perks}</ul>
+          <div class="spacer"></div>
+          <button class="btn primary block" onclick="choose('subscribe','${s.id}')">${s.badge?'Get '+s.name:'Choose '+s.name}</button>
+        </div>`;
+      }).join("");
+    }
+
+    function renderBundles(p){
+      // Free card + bundles side by side.
+      const f = p.free;
+      const freeCard = `<div class="card">
+        <div class="pname">${f.name}</div>
+        <div class="tag">${f.tagline}</div>
+        <div class="price">$0</div>
+        <div class="perexam">Start here</div>
+        <ul class="perks">${f.perks.map(x=>`<li>${check}<span>${x}</span></li>`).join("")}</ul>
+        <div class="spacer"></div>
+        <button class="btn ghost block" onclick="choose('free','free')">Start free</button>
+      </div>`;
+      const bundles = p.bundles.map(b => {
+        const badge = b.badge ? `<div class="badge gold">${b.badge}</div>` : "";
+        const feature = b.badge ? "feature" : "";
+        return `<div class="card ${feature}">${badge}
+          <div class="pname">${b.name}</div>
+          <div class="tag">${b.tagline||""}</div>
+          <div class="price">${money(b.price)}</div>
+          <div class="perexam">${b.exams} exams · ${money(b.per_exam)}/exam</div>
+          <ul class="perks">${b.perks.map(x=>`<li>${check}<span>${x}</span></li>`).join("")}</ul>
+          <div class="spacer"></div>
+          <button class="btn primary block" onclick="choose('bundle','${b.id}')">Buy ${b.name}</button>
+        </div>`;
+      }).join("");
+      document.getElementById('bundles').innerHTML = freeCard + bundles;
+      document.getElementById('topup-note').textContent =
+        `Already subscribed and out of exams? Top‑up at ${money(p.topup.price_per_exam)}/exam — cheaper than any bundle.`;
+    }
+
+    function choose(kind, id){
+      // Hook these up to your checkout / auth flow.
+      const map = {
+        free: "Great — enter your email to claim your free exam.",
+        bundle: `You picked the ${id} bundle. Redirecting to checkout…`,
+        subscribe: `You picked the ${id} plan (${billing}). Redirecting to checkout…`
+      };
+      alert(map[kind] || "Selected " + id);
+    }
+
+    document.getElementById('monthly').onclick = (e)=>{billing="monthly";toggle(e.target);load();};
+    document.getElementById('annual').onclick = (e)=>{billing="annual";toggle(e.target);load();};
+    function toggle(btn){document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+
+    // Fallback catalog so the page renders even without the backend running.
+    const FALLBACK = {
+      currency:"USD", topup:{price_per_exam:0.5},
+      free:{name:"Free trial",tagline:"1 free exam — no credit card needed",
+        perks:["1 full resume ↔ job match analysis","Detailed score breakdown","No card, no commitment"]},
+      bundles:[
+        {id:"bundle_starter",name:"Starter pack",price:5,exams:5,per_exam:1.0,tagline:"Just testing things out",
+          perks:["5 exams","Credits valid 12 months","No subscription"]},
+        {id:"bundle_value",name:"Value pack",price:15,exams:20,per_exam:0.75,badge:"Best value bundle",tagline:"Best price without subscribing",
+          perks:["20 exams","Credits valid 12 months","Save 25% vs Starter"]},
+      ],
+      subscriptions:[
+        {id:"sub_pro",name:"Pro",price_monthly:9,price_annual:90,per_exam_effective:0.45,badge:"Most popular",tagline:"For active job seekers",
+          perks:["20 exams every month","Out of credits? Top‑up at $0.50/exam (cheaper than bundles)","Priority processing","Cancel anytime"]},
+        {id:"sub_unlimited",name:"Unlimited",price_monthly:19,price_annual:190,tagline:"For coaches & power users",
+          perks:["Unlimited exams (fair use: 20/day)","Priority processing","Cancel anytime"]},
+      ],
+    };
+
+    async function load(){
+      let p = FALLBACK;
+      try{
+        const r = await fetch(API + "/pricing", {cache:"no-store"});
+        if(r.ok) p = await r.json();
+      }catch(e){ /* use fallback */ }
+      renderSubs(p);
+      renderBundles(p);
+    }
+    load();
+  </script>
+</body>
+</html>
