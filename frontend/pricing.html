@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pricing — Real-time Exam Practice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      --blue: #2f6feb; --blue-dark: #1f54c4; --ink: #0f172a; --muted: #64748b;
+      --green: #16a34a; --amber: #d97706; --card: #ffffff; --bg: #f6f8fc;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    .wrap { max-width: 1060px; margin: 0 auto; padding: 0 1rem 4rem; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+    nav a { color: var(--blue); text-decoration: none; font-weight: 600; }
+    .hero { text-align: center; padding: 1.5rem 0 .5rem; }
+    .hero h1 { font-size: 2.2rem; margin: .2rem 0; }
+    .hero p { color: var(--muted); font-size: 1.1rem; margin: .4rem 0; }
+    .freebanner {
+      display: inline-block; margin-top: .6rem; padding: .55rem 1.1rem; border-radius: 999px;
+      background: #ecfdf5; color: var(--green); font-weight: 700; border: 1px solid #bbf7d0;
+    }
+    .anchor { color: var(--muted); font-size: .95rem; margin-top: .8rem; }
+    .anchor s { color: #b91c1c; }
+    h2.section { text-align: center; margin: 2.6rem 0 .3rem; font-size: 1.5rem; }
+    p.sub { text-align: center; color: var(--muted); margin: 0 0 1.4rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+    .card {
+      background: var(--card); border-radius: 1.1rem; padding: 1.5rem; position: relative;
+      box-shadow: 0 1px 6px rgba(15,23,42,.07); border: 2px solid transparent;
+      display: flex; flex-direction: column;
+    }
+    .card.featured { border-color: var(--blue); transform: scale(1.03); box-shadow: 0 8px 28px rgba(47,111,235,.18); }
+    .badge {
+      position: absolute; top: -0.8rem; left: 50%; transform: translateX(-50%);
+      background: var(--blue); color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .04em;
+      padding: .3rem .8rem; border-radius: 999px; white-space: nowrap;
+    }
+    .badge.value { background: var(--green); }
+    .badge.heavy { background: var(--amber); }
+    .card h3 { margin: .3rem 0 .1rem; font-size: 1.2rem; }
+    .tagline { color: var(--muted); font-size: .92rem; min-height: 2.2em; margin: 0; }
+    .price { font-size: 2rem; font-weight: 800; margin: .7rem 0 .1rem; }
+    .price small { font-size: .95rem; font-weight: 500; color: var(--muted); }
+    .pereach { color: var(--green); font-weight: 700; font-size: .95rem; margin-bottom: .8rem; }
+    ul.feat { list-style: none; padding: 0; margin: 0 0 1.1rem; flex: 1; }
+    ul.feat li { padding: .28rem 0 .28rem 1.5rem; position: relative; font-size: .95rem; }
+    ul.feat li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+    button.cta {
+      width: 100%; padding: .85rem; border: 0; border-radius: .8rem; cursor: pointer;
+      font-size: 1rem; font-weight: 700; background: #eef2ff; color: var(--blue);
+      transition: background .15s;
+    }
+    button.cta:hover { background: #e0e7ff; }
+    .featured button.cta, button.cta.solid { background: var(--blue); color: #fff; }
+    .featured button.cta:hover, button.cta.solid:hover { background: var(--blue-dark); }
+    .note { color: var(--muted); font-size: .82rem; margin-top: .7rem; text-align: center; }
+    .topup {
+      background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; border-radius: 1.1rem;
+      padding: 1.6rem; margin-top: 2.6rem; display: flex; flex-wrap: wrap; gap: 1rem;
+      align-items: center; justify-content: space-between;
+    }
+    .topup h3 { margin: 0 0 .3rem; } .topup p { margin: 0; color: #cbd5e1; font-size: .95rem; max-width: 560px; }
+    .topup .buy { display: flex; gap: .5rem; align-items: center; }
+    .topup input { width: 4.5rem; padding: .6rem; border-radius: .6rem; border: 0; font-size: 1rem; text-align: center; }
+    .topup button { padding: .7rem 1.2rem; border: 0; border-radius: .7rem; background: var(--green); color: #fff; font-weight: 700; cursor: pointer; }
+    .faq { max-width: 720px; margin: 2.6rem auto 0; }
+    .faq details { background: #fff; border-radius: .8rem; padding: .9rem 1.1rem; margin-bottom: .6rem; box-shadow: 0 1px 4px rgba(15,23,42,.06); }
+    .faq summary { font-weight: 600; cursor: pointer; }
+    .faq p { color: var(--muted); }
+    .toast {
+      position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: #fff; padding: .8rem 1.3rem; border-radius: .8rem;
+      font-size: .95rem; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 50;
+      max-width: 90vw;
+    }
+    .toast.show { opacity: 1; }
+    .acct { font-size: .9rem; color: var(--muted); }
+    .acct b { color: var(--ink); }
+    /* email modal */
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none; align-items: center; justify-content: center; z-index: 40; }
+    .overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 1.1rem; padding: 1.8rem; max-width: 380px; width: 92%; text-align: center; }
+    .modal input { width: 100%; padding: .8rem; border: 1px solid #cbd5e1; border-radius: .7rem; font-size: 1rem; margin: .8rem 0; }
+    .modal button { width: 100%; padding: .85rem; border: 0; border-radius: .8rem; background: var(--blue); color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a href="/">← Back to exam</a>
+    <span class="acct" id="acct"></span>
+  </nav>
+
+  <div class="hero">
+    <h1>Land the offer. Practice like it's real.</h1>
+    <p>Real-time AI exam &amp; interview practice with instant feedback.</p>
+    <div class="freebanner">🎁 Your first exam is FREE — no credit card needed</div>
+    <div class="anchor">Pay-as-you-go exams cost <s>$9.00</s> each. Members pay as little as <b>$2.95</b>.</div>
+  </div>
+
+  <h2 class="section">Subscribe &amp; save up to 67%</h2>
+  <p class="sub">Cancel anytime. Run out mid-month? Subscribers top up at exclusive low rates.</p>
+  <div class="grid" id="plans"></div>
+
+  <div class="topup" id="topup" style="display:none">
+    <div>
+      <h3>⚡ Subscriber top-up — your exclusive rate</h3>
+      <p id="topupText">Used all your monthly exams? As a subscriber you buy extras cheaper than anyone else. They never expire.</p>
+    </div>
+    <div class="buy">
+      <input type="number" id="topupQty" min="1" max="20" value="5" />
+      <button id="topupBtn">Top up</button>
+    </div>
+  </div>
+
+  <h2 class="section">Not ready to subscribe? Grab a credit pack</h2>
+  <p class="sub">One-time purchase. No commitment. Credits never expire.</p>
+  <div class="grid" id="bundles"></div>
+
+  <div class="faq">
+    <h2 class="section">Questions?</h2>
+    <details><summary>Is the free exam really free?</summary><p>Yes — one full exam per email, no credit card required. Just sign up and start.</p></details>
+    <details><summary>What does "Unlimited" mean?</summary><p>Practice freely up to a fair-use limit of 20 exams per month — more than one exam every other day. Need even more? Top up at $3.50/exam, our lowest rate.</p></details>
+    <details><summary>What happens when a subscriber runs out of credits?</summary><p>You keep your subscription and buy extra exams at your exclusive subscriber rate — always cheaper than credit packs.</p></details>
+    <details><summary>Do credits expire?</summary><p>Bundle and top-up credits never expire. Monthly subscription credits reset each billing cycle.</p></details>
+    <details><summary>Can I cancel anytime?</summary><p>Yes, in one click. You keep any unused bundle or top-up credits forever.</p></details>
+  </div>
+</div>
+
+<div class="overlay" id="emailOverlay">
+  <div class="modal">
+    <h3>🎁 Claim your free exam</h3>
+    <p style="color:#64748b">Enter your email to create your account. No credit card. No spam.</p>
+    <input type="email" id="emailInput" placeholder="you@example.com" />
+    <button id="emailBtn">Create account &amp; continue</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const apiKey = () => localStorage.getItem('exam_api_key');
+let pendingAction = null;
+let catalog = null;
+let me = null;
+
+function toast(msg, ms = 3500) {
+  $('toast').textContent = msg;
+  $('toast').classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => $('toast').classList.remove('show'), ms);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey() || '', ...(opts.headers || {}) },
+  });
+  const data = await res.json();
+  if (!res.ok) throw data;
+  return data;
+}
+
+function money(v) { return '$' + v.toFixed(2).replace(/\.00$/, ''); }
+
+function renderPlans() {
+  $('plans').innerHTML = catalog.plans.map(p => {
+    const featured = p.id === 'pro';
+    const badgeCls = p.id === 'unlimited' ? 'badge heavy' : 'badge';
+    const isCurrent = me && me.plan === p.id;
+    const feats = {
+      starter: [`${p.exams_per_month} exams every month`, 'Real-time speech scoring', 'Full feedback reports', `Top-ups at ${money(p.topup_price)}/exam`],
+      pro: [`${p.exams_per_month} exams every month`, 'Real-time speech scoring', 'Full feedback reports', 'Priority processing', `Top-ups at ${money(p.topup_price)}/exam`],
+      unlimited: ['Unlimited practice*', 'Up to 20 exams / month', 'Priority processing', 'Full feedback reports', `Cheapest top-ups: ${money(p.topup_price)}/exam`],
+    }[p.id];
+    return `
+    <div class="card ${featured ? 'featured' : ''}">
+      ${p.badge ? `<div class="${badgeCls}">${p.badge}</div>` : ''}
+      <h3>${p.name}</h3>
+      <p class="tagline">${p.tagline}</p>
+      <div class="price">${money(p.price_month)}<small>/month</small></div>
+      <div class="pereach">≈ ${money(p.per_exam)} per exam · save ${Math.round(100 * (1 - p.per_exam / catalog.single_exam_anchor))}%</div>
+      <ul class="feat">${feats.map(f => `<li>${f}</li>`).join('')}</ul>
+      <button class="cta" data-plan="${p.id}" ${isCurrent ? 'disabled' : ''}>${isCurrent ? '✓ Your current plan' : 'Start with ' + p.name}</button>
+      ${p.fair_use_note ? `<div class="note">${p.fair_use_note}</div>` : ''}
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-plan]').forEach(b =>
+    b.addEventListener('click', () => requireAccount(() => subscribe(b.dataset.plan))));
+}
+
+function renderBundles() {
+  $('bundles').innerHTML = catalog.bundles.map(b => `
+    <div class="card ${b.id === 'bundle_15' ? 'featured' : ''}">
+      ${b.badge ? `<div class="badge ${b.id === 'bundle_15' ? 'value' : ''}">${b.badge}</div>` : ''}
+      <h3>${b.name}</h3>
+      <p class="tagline">${b.tagline}</p>
+      <div class="price">${money(b.price)}</div>
+      <div class="pereach">${b.credits} exams · ${money(b.per_exam)}/exam · save ${b.save_pct}%</div>
+      <ul class="feat"><li>Credits never expire</li><li>No subscription needed</li><li>Full feedback reports</li></ul>
+      <button class="cta ${b.id === 'bundle_15' ? '' : ''}" data-bundle="${b.id}">Buy ${b.credits} exams</button>
+    </div>`).join('');
+  document.querySelectorAll('[data-bundle]').forEach(b =>
+    b.addEventListener('click', () => requireAccount(() => buyBundle(b.dataset.bundle))));
+}
+
+function renderAccount() {
+  if (!me) { $('acct').innerHTML = ''; $('topup').style.display = 'none'; return; }
+  $('acct').innerHTML = `${me.email} · <b>${me.total_credits} credit${me.total_credits === 1 ? '' : 's'}</b>${me.plan_name ? ' · ' + me.plan_name + ' plan' : ''}`;
+  if (me.plan) {
+    $('topup').style.display = 'flex';
+    $('topupText').textContent =
+      `Your ${me.plan_name} rate: ${money(me.topup_price)}/exam (vs ${money(6)}+ in packs). ` +
+      `${me.monthly_credits_left} of ${me.monthly_allowance} monthly exams left. Top-up credits never expire.`;
+  } else {
+    $('topup').style.display = 'none';
+  }
+}
+
+function requireAccount(action) {
+  if (apiKey() && me) { action(); return; }
+  pendingAction = action;
+  $('emailOverlay').classList.add('show');
+  $('emailInput').focus();
+}
+
+async function subscribe(plan) {
+  try {
+    me = await api('/api/checkout/subscribe', { method: 'POST', body: JSON.stringify({ plan }) });
+    toast(`🎉 Welcome to ${me.plan_name}! ${me.total_credits} exams ready. Demo checkout — plug in Stripe for live payments.`);
+    renderAccount(); renderPlans();
+  } catch (e) { toast(e.message || 'Something went wrong.'); }
+}
+
+async function buyBundle(bundle) {
+  try {
+    me = await api('/api/checkout/bundle', { method: 'POST', body: JSON.stringify({ bundle }) });
+    toast(`✅ Credits added! You now have ${me.total_credits} exams. Demo checkout — plug in Stripe for live payments.`);
+    renderAccount();
+  } catch (e) { toast(e.message || 'Something went wrong.'); }
+}
+
+$('topupBtn').addEventListener('click', () => requireAccount(async () => {
+  const qty = parseInt($('topupQty').value, 10);
+  try {
+    me = await api('/api/checkout/topup', { method: 'POST', body: JSON.stringify({ quantity: qty }) });
+    toast(`⚡ Topped up ${qty} exams for ${money(me.charged)}. Total: ${me.total_credits} credits.`);
+    renderAccount();
+  } catch (e) { toast(e.message || 'Something went wrong.'); }
+}));
+
+$('emailBtn').addEventListener('click', async () => {
+  const email = $('emailInput').value.trim();
+  try {
+    const res = await fetch('/api/auth/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.message || 'Invalid email.'); return; }
+    localStorage.setItem('exam_api_key', data.api_key);
+    me = data;
+    $('emailOverlay').classList.remove('show');
+    if (data.new_account && data.free_credits > 0) toast('🎁 Free exam added to your account!');
+    renderAccount(); renderPlans();
+    if (pendingAction) { const a = pendingAction; pendingAction = null; a(); }
+  } catch { toast('Network error, please retry.'); }
+});
+$('emailInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('emailBtn').click(); });
+
+(async function init() {
+  catalog = await (await fetch('/api/pricing')).json();
+  if (apiKey()) {
+    try { me = await api('/api/me'); } catch { localStorage.removeItem('exam_api_key'); }
+  }
+  renderPlans(); renderBundles(); renderAccount();
+})();
+</script>
+</body>
+</html>

@@ -6,23 +6,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    body { max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #0f172a; }
     .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
-    button { padding: .7rem 1rem; border: 0; border-radius: .75rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    button { padding: .7rem 1rem; border: 0; border-radius: .75rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.15); font-size: 1rem; }
     button.primary { background: #2f6feb; color: white; }
     button.secondary { background: #f0f2f5; }
     .status { font-size: .9rem; color: #555; }
     .bubble { margin-top: 1rem; padding: 1rem; border-radius: 1rem; background: #f8fafc; min-height: 3rem; white-space: pre-wrap; }
     .final { background: #eef7ff; }
     code { background: #f3f4f6; padding: .1rem .3rem; border-radius: .3rem; }
+
+    .credits-bar {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+      background: #f1f5f9; border-radius: .9rem; padding: .7rem 1rem; margin-bottom: 1.2rem; font-size: .95rem;
+    }
+    .credits-bar b { color: #2f6feb; }
+    .credits-bar a { color: #2f6feb; font-weight: 600; text-decoration: none; }
+    .pill { background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 999px; padding: .2rem .7rem; font-weight: 700; font-size: .85rem; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none; align-items: center; justify-content: center; z-index: 40; }
+    .overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 1.1rem; padding: 1.8rem; max-width: 400px; width: 92%; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+    .modal h3 { margin-top: 0; }
+    .modal p { color: #64748b; }
+    .modal input { width: 100%; box-sizing: border-box; padding: .8rem; border: 1px solid #cbd5e1; border-radius: .7rem; font-size: 1rem; margin: .8rem 0; }
+    .modal .big { width: 100%; padding: .85rem; border: 0; border-radius: .8rem; background: #2f6feb; color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
+    .modal .link { display: inline-block; margin-top: .8rem; color: #64748b; font-size: .9rem; background: none; box-shadow: none; }
   </style>
 </head>
 <body>
+  <div class="credits-bar" id="creditsBar">
+    <span id="creditsInfo">Loading…</span>
+    <span><a href="/pricing">Plans &amp; credit packs →</a></span>
+  </div>
+
   <h1>🎙️ Real-time Speech-to-Text</h1>
   <p>Local, streaming transcription using <code>Vosk</code> on a Python backend.</p>
 
   <div class="row">
-    <button id="start" class="primary">Start</button>
+    <button id="start" class="primary">Start exam</button>
     <button id="stop" class="secondary" disabled>Stop</button>
     <span class="status" id="status">Idle</span>
   </div>
@@ -31,14 +53,88 @@
   <div id="partial" class="bubble"></div>
   <div id="final" class="bubble final"></div>
 
+  <!-- Email gate: claims the 1 free exam -->
+  <div class="overlay" id="emailOverlay">
+    <div class="modal">
+      <h3>🎁 Your first exam is free</h3>
+      <p>Enter your email to claim it. No credit card required.</p>
+      <input type="email" id="emailInput" placeholder="you@example.com" />
+      <button class="big" id="emailBtn">Claim my free exam</button>
+    </div>
+  </div>
+
+  <!-- Paywall shown when out of credits -->
+  <div class="overlay" id="paywallOverlay">
+    <div class="modal">
+      <h3 id="paywallTitle">You're out of exam credits</h3>
+      <p id="paywallMsg"></p>
+      <button class="big" onclick="location.href='/pricing'">See plans &amp; credit packs</button>
+      <button class="link" onclick="document.getElementById('paywallOverlay').classList.remove('show')">Maybe later</button>
+    </div>
+  </div>
+
   <script type="module">
     const startBtn = document.getElementById('start');
     const stopBtn  = document.getElementById('stop');
     const statusEl = document.getElementById('status');
     const partialEl= document.getElementById('partial');
     const finalEl  = document.getElementById('final');
+    const creditsInfo = document.getElementById('creditsInfo');
+    const emailOverlay = document.getElementById('emailOverlay');
+    const paywallOverlay = document.getElementById('paywallOverlay');
 
     let ctx, mediaStream, sourceNode, workletNode, ws;
+    let me = null;
+
+    const apiKey = () => localStorage.getItem('exam_api_key');
+
+    async function refreshMe() {
+      if (!apiKey()) { me = null; renderCredits(); return; }
+      const res = await fetch('/api/me', { headers: { 'x-api-key': apiKey() } });
+      if (!res.ok) { localStorage.removeItem('exam_api_key'); me = null; }
+      else me = await res.json();
+      renderCredits();
+    }
+
+    function renderCredits() {
+      if (!me) {
+        creditsInfo.innerHTML = `<span class="pill">🎁 1 free exam</span> Sign in with your email to claim it.`;
+        return;
+      }
+      const planPart = me.plan_name ? ` · ${me.plan_name} plan (${me.monthly_credits_left}/${me.monthly_allowance} this month)` : '';
+      creditsInfo.innerHTML = `${me.email} · <b>${me.total_credits} exam credit${me.total_credits === 1 ? '' : 's'}</b>${planPart}`;
+    }
+
+    function showPaywall(message, subscriber) {
+      document.getElementById('paywallTitle').textContent =
+        subscriber ? 'Monthly exams used up — top up cheaper' : "You're out of exam credits";
+      document.getElementById('paywallMsg').textContent = message;
+      paywallOverlay.classList.add('show');
+    }
+
+    async function ensureAccount() {
+      if (apiKey() && me) return true;
+      emailOverlay.classList.add('show');
+      document.getElementById('emailInput').focus();
+      return false;
+    }
+
+    document.getElementById('emailBtn').addEventListener('click', async () => {
+      const email = document.getElementById('emailInput').value.trim();
+      const res = await fetch('/api/auth/start', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.message || 'Invalid email.'); return; }
+      localStorage.setItem('exam_api_key', data.api_key);
+      me = data;
+      emailOverlay.classList.remove('show');
+      renderCredits();
+    });
+    document.getElementById('emailInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('emailBtn').click();
+    });
 
     // Convert Float32 [-1,1] to 16-bit PCM (little-endian)
     function floatTo16BitPCM(float32Array) {
@@ -51,29 +147,24 @@
     }
 
     async function initAudioGraph() {
-      // Try to request 16k. If device can’t, the worklet still downsamples/channels to mono.
       ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 
-      // Mic
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
       sourceNode = ctx.createMediaStreamSource(mediaStream);
 
-      // Load our worklet
       const workletURL = URL.createObjectURL(new Blob([`
         class PCMDownsampler extends AudioWorkletProcessor {
           constructor() {
             super();
-            // No state needed; context.sampleRate gives us input rate
             this.inputSampleRate = sampleRate;
             this.targetSampleRate = 16000;
             this._resampleRatio = this.inputSampleRate / this.targetSampleRate;
             this._buffer = [];
           }
 
-          // Simple linear resampler to 16k & mono mixdown
           _downsample(channelData) {
             if (this.inputSampleRate === this.targetSampleRate) {
-              return channelData; // already 16k
+              return channelData;
             }
             const outLength = Math.floor(channelData.length / this._resampleRatio);
             const out = new Float32Array(outLength);
@@ -93,7 +184,6 @@
           process(inputs, outputs, parameters) {
             const input = inputs[0];
             if (!input || input.length === 0) return true;
-            // Mix to mono
             const ch0 = input[0] || new Float32Array(128);
             let mono = ch0;
             if (input.length > 1) {
@@ -105,10 +195,7 @@
                 mono[i] = sum / input.length;
               }
             }
-            // Downsample to 16k
             const ds = this._downsample(mono);
-
-            // Send to main thread as raw Float32
             this.port.postMessage(ds.buffer, [ds.buffer]);
             return true;
           }
@@ -118,22 +205,20 @@
 
       await ctx.audioWorklet.addModule(workletURL);
       workletNode = new AudioWorkletNode(ctx, 'pcm-downsampler');
-
-      // Pipe mic -> worklet (not to speakers)
       sourceNode.connect(workletNode);
 
-      // When chunks arrive from the worklet, convert to PCM16 and ship to server
       workletNode.port.onmessage = (event) => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const floatChunk = new Float32Array(event.data);
         const pcm16 = floatTo16BitPCM(floatChunk);
-        ws.send(pcm16.buffer); // binary frame
+        ws.send(pcm16.buffer);
       };
     }
 
-    function connectWS() {
+    function connectWS(sessionToken) {
       return new Promise((resolve, reject) => {
-        ws = new WebSocket("ws://localhost:8000/ws");
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}/ws?session=${encodeURIComponent(sessionToken)}`);
         ws.binaryType = "arraybuffer";
 
         ws.onopen = () => resolve();
@@ -159,15 +244,38 @@
     }
 
     async function start() {
+      if (!(await ensureAccount())) return;
+
       startBtn.disabled = true;
+      statusEl.textContent = 'Checking credits…';
+
+      // Spend one credit and get a one-time exam session token
+      const res = await fetch('/api/exam/start', {
+        method: 'POST', headers: { 'x-api-key': apiKey() },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        startBtn.disabled = false;
+        statusEl.textContent = 'Idle';
+        showPaywall(data.message || 'No credits left.', data.error === 'out_of_credits_subscriber');
+        return;
+      }
+      me = data;
+      renderCredits();
+
       statusEl.textContent = 'Starting…';
       finalEl.textContent = '';
       partialEl.textContent = '';
 
-      await initAudioGraph();
-      await connectWS();
+      try {
+        await initAudioGraph();
+        await connectWS(data.session_token);
+      } catch (e) {
+        statusEl.textContent = 'Failed to start (mic or server unavailable)';
+        startBtn.disabled = false;
+        return;
+      }
 
-      // Resume context (needed on some browsers)
       if (ctx.state === 'suspended') await ctx.resume();
 
       statusEl.textContent = `Recording @ ${ctx.sampleRate} Hz → streaming to backend`;
@@ -191,11 +299,13 @@
 
       statusEl.textContent = 'Idle';
       startBtn.disabled = false;
+      refreshMe();
     }
 
     startBtn.addEventListener('click', start);
     stopBtn.addEventListener('click', stop);
+
+    refreshMe();
   </script>
 </body>
 </html>
-
